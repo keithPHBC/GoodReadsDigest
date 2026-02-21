@@ -4,11 +4,11 @@
 
 **Goal:** Generate and explore ideas without filtering.
 
-- [ ] Define constraints upfront (platform, tech stack, scope limits)
-- [ ] Brainstorm core product concepts (problem space, target users, value proposition)
-- [ ] Identify the "core workflow" — what does the user do repeatedly?
-- [ ] List reference products / inspirations
-- [ ] Write a 1-2 sentence elevator pitch for top candidates
+- [x] Define constraints upfront (platform, tech stack, scope limits)
+- [x] Brainstorm core product concepts (problem space, target users, value proposition)
+- [x] Identify the "core workflow" — what does the user do repeatedly?
+- [x] List reference products / inspirations
+- [x] Write a 1-2 sentence elevator pitch for top candidates
 
 **Output:** A short list of candidate ideas with elevator pitches.
 
@@ -18,12 +18,12 @@
 
 **Goal:** Pick one idea and define it clearly enough to build.
 
-- [ ] Evaluate candidates against constraints (feasibility, scope, usefulness)
-- [ ] Select one concept
-- [ ] Define the core functionality in concrete terms
-- [ ] Identify the minimum set of features for a usable proof-of-concept
-- [ ] List what is explicitly OUT of scope for the PoC
-- [ ] Sketch the user flow (input → processing → output)
+- [x] Evaluate candidates against constraints (feasibility, scope, usefulness)
+- [x] Select one concept
+- [x] Define the core functionality in concrete terms
+- [x] Identify the minimum set of features for a usable proof-of-concept
+- [x] List what is explicitly OUT of scope for the PoC
+- [x] Sketch the user flow (input → processing → output)
 
 **Output:** A concept document (`CONCEPT.md`) with functionality definition, PoC feature list, and scope boundaries.
 
@@ -169,10 +169,12 @@ These documents should be created alongside the process and maintained throughou
 
 ## Current Status
 
-**Phase:** 1 — Brainstorm & Discovery
-**Status:** Not started
+**Phase:** 2 — Concept Selection & Definition
+**Status:** Complete
 
 ### Phase History
 
 | Phase | Status | Date |
 |-------|--------|------|
+| 1 — Brainstorm & Discovery | Complete | 2026-02-20 |
+| 2 — Concept Selection & Definition | Complete | 2026-02-20 |
