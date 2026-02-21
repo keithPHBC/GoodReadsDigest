@@ -5,6 +5,8 @@ import random
 from playwright.async_api import async_playwright, Browser, Page
 from bs4 import BeautifulSoup
 
+from dataclasses import dataclass
+
 from app.models.schemas import BookSearchResult
 
 # Module-level browser instance for reuse across requests
@@ -184,6 +186,217 @@ def _extract_book_id(href: str) -> str | None:
         else:
             break
     return book_id if book_id else None
+
+
+@dataclass
+class ScrapedReview:
+    """A single scraped review."""
+    text: str
+    rating: int | None
+
+
+async def fetch_reviews(
+    book_id: str,
+    star_rating: int | None = None,
+    max_reviews: int = 100,
+) -> tuple[list[ScrapedReview], BookSearchResult | None]:
+    """Fetch reviews for a book from Goodreads.
+
+    Returns a tuple of (reviews, book_info). book_info is extracted from the
+    book page header so the caller doesn't need a separate request.
+    """
+    page = await _new_page()
+    try:
+        url = f"{GOODREADS_BOOK_URL}/{book_id}"
+        await page.goto(url, wait_until="domcontentloaded")
+        await _random_delay(3, 5)
+        await _dismiss_modals(page)
+
+        # Extract book info from the page header
+        book_info = await _extract_book_info(page, book_id)
+
+        # Wait for reviews to load
+        try:
+            await page.wait_for_selector(".ReviewCard", timeout=15000)
+        except Exception:
+            await asyncio.sleep(5)
+
+        # Apply star rating filter if requested
+        if star_rating is not None:
+            await _apply_star_filter(page, star_rating)
+
+        # Paginate and collect reviews
+        reviews = await _collect_reviews(page, max_reviews)
+
+        return reviews, book_info
+    finally:
+        await page.context.close()
+
+
+async def _extract_book_info(page: Page, book_id: str) -> BookSearchResult | None:
+    """Extract book title, author, and image from the book page."""
+    html = await page.content()
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Title
+    title_el = soup.select_one('h1[data-testid="bookTitle"], h1.Text__title1')
+    title = title_el.get_text(strip=True) if title_el else "Unknown"
+
+    # Author
+    author_el = soup.select_one(
+        'span[data-testid="name"], .ContributorLink__name, a.ContributorLink'
+    )
+    author = author_el.get_text(strip=True) if author_el else "Unknown"
+
+    # Cover image
+    img_el = soup.select_one('img.ResponsiveImage, img[data-testid="coverImage"]')
+    image_url = img_el.get("src", "") if img_el else ""
+
+    return BookSearchResult(
+        id=book_id,
+        title=title,
+        author=author,
+        image_url=image_url,
+        url=f"{GOODREADS_BOOK_URL}/{book_id}",
+    )
+
+
+async def _apply_star_filter(page: Page, star_rating: int):
+    """Apply a star rating filter by clicking the histogram bar."""
+    # The rating histogram bars are clickable and filter reviews
+    # Try clicking the bar for the requested star rating
+    histogram_selectors = [
+        f'div.RatingsHistogram a[aria-label*="{star_rating} star"]',
+        f'a[aria-label*="{star_rating} star"]',
+        f'div.RatingsHistogram button[aria-label*="{star_rating}"]',
+    ]
+
+    for selector in histogram_selectors:
+        try:
+            bar = page.locator(selector).first
+            if await bar.is_visible(timeout=3000):
+                await bar.click()
+                await _random_delay(3, 5)
+                # Wait for reviews to reload
+                try:
+                    await page.wait_for_selector(".ReviewCard", timeout=10000)
+                except Exception:
+                    await asyncio.sleep(3)
+                return
+        except Exception:
+            continue
+
+    # Fallback: try the star text labels in the filter area
+    try:
+        star_label = page.locator(f'text="{star_rating} stars"').first
+        if await star_label.is_visible(timeout=3000):
+            await star_label.click()
+            await _random_delay(3, 5)
+            return
+    except Exception:
+        pass
+
+
+async def _collect_reviews(page: Page, max_reviews: int) -> list[ScrapedReview]:
+    """Collect reviews from the page, paginating as needed."""
+    all_reviews: list[ScrapedReview] = []
+    seen_texts: set[str] = set()  # Deduplicate reviews
+
+    # Max pagination attempts to avoid infinite loops
+    max_pages = (max_reviews // 30) + 2
+
+    for _ in range(max_pages):
+        html = await page.content()
+        soup = BeautifulSoup(html, "html.parser")
+
+        cards = soup.select(".ReviewCard")
+        new_count = 0
+
+        for card in cards:
+            review = _parse_review_card(card)
+            if review and review.text:
+                # Deduplicate by first 100 chars
+                key = review.text[:100]
+                if key not in seen_texts:
+                    seen_texts.add(key)
+                    all_reviews.append(review)
+                    new_count += 1
+
+        if len(all_reviews) >= max_reviews:
+            break
+
+        # Try to load more reviews via "More reviews and ratings" link
+        loaded_more = await _click_more_reviews(page)
+        if not loaded_more or new_count == 0:
+            break
+
+    return all_reviews[:max_reviews]
+
+
+async def _click_more_reviews(page: Page) -> bool:
+    """Click 'More reviews and ratings' link to load the next page.
+
+    Returns True if navigation to a new reviews page succeeded.
+    """
+    try:
+        link = page.locator('a:has-text("More reviews and ratings")').first
+        if await link.is_visible(timeout=5000):
+            await link.scroll_into_view_if_needed()
+            await _random_delay(2, 4)
+            await link.click()
+            await _random_delay(4, 7)
+            # Dismiss any modals that appear on the new page
+            await _dismiss_modals(page)
+            # Wait for review cards on the new page
+            try:
+                await page.wait_for_selector(".ReviewCard", timeout=15000)
+            except Exception:
+                await asyncio.sleep(3)
+            return True
+    except Exception:
+        pass
+
+    return False
+
+
+def _parse_review_card(card) -> ScrapedReview | None:
+    """Extract review text and rating from a ReviewCard element."""
+    rating = None
+    text = None
+
+    # Extract star rating from aria-label
+    rating_el = card.select_one('[aria-label*="Rating"][aria-label*="out of"]')
+    if rating_el:
+        label = rating_el.get("aria-label", "")
+        parts = label.split()
+        for j, word in enumerate(parts):
+            if word == "Rating" and j + 1 < len(parts):
+                try:
+                    rating = int(parts[j + 1])
+                except ValueError:
+                    pass
+                break
+
+    # Extract review text
+    text_el = card.select_one(
+        ".ReviewText__content .Formatted, .TruncatedContent .Formatted"
+    )
+    if text_el:
+        text = text_el.get_text(strip=True)
+
+    # Fallback: largest text block
+    if not text:
+        all_text = card.find_all(["span", "div", "p"])
+        candidates = [(el, len(el.get_text(strip=True))) for el in all_text]
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        for el, length in candidates:
+            if length > 50:
+                text = el.get_text(strip=True)
+                break
+
+    if text:
+        return ScrapedReview(text=text, rating=rating)
+    return None
 
 
 async def shutdown_browser():
