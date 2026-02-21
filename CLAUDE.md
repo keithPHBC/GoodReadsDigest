@@ -8,17 +8,20 @@
 
 - **Backend:** Python + FastAPI
 - **Frontend:** React + TypeScript
-- **NLP:** Python ecosystem (specific library TBD in Phase 3)
+- **Scraping:** Playwright + BeautifulSoup4
+- **Sentiment:** VADER (vaderSentiment)
+- **Phrase extraction:** spaCy + scikit-learn TF-IDF
+- **Theme identification:** scikit-learn NMF
 - **Data access:** Web scraping (Goodreads API is retired)
 - **Database:** None for PoC (in-memory processing)
 - **Platform:** Web app, run locally for PoC
 
 ## Current Status
 
-**Phase:** 2 — Concept Selection & Definition (Complete)
-**Next:** Phase 3 — Technical Design & Work Planning
+**Phase:** 3 — Technical Design & Work Planning (In Progress — spike remaining)
+**Next:** Execute SPIKE-1 and SPIKE-2 to validate Goodreads scraping, then move to Phase 4.
 
-Phases 1 and 2 are complete. `CONCEPT.md` defines the full PoC scope.
+Phases 1-2 are complete. Phase 3 design and backlog are done; the Goodreads scraping spike is the last deliverable.
 
 ## Key Documents
 
@@ -28,6 +31,8 @@ Phases 1 and 2 are complete. `CONCEPT.md` defines the full PoC scope.
 | `CONCEPT.md` | Complete | Core functionality, PoC scope, out-of-scope, user flow, decisions |
 | `CHAT_LOG.md` | Active | Full conversation history — update after each session |
 | `BRANCHING_STRATEGY.md` | Complete | Feature branching off `main` |
+| `TECH_DESIGN.md` | Complete | Architecture, library choices, project structure, data model, risks |
+| `BACKLOG.md` | Active | Epics: SPIKE, SCRAPER, ANALYSIS, API, UI — all work items for Phases 3-5 |
 
 ## Process Rules (Key Reminders)
 

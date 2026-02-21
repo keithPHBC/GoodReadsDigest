@@ -33,13 +33,13 @@
 
 **Goal:** Make implementation decisions and break the work into deliverable items.
 
-- [ ] Choose framework/libraries and justify the choice
-- [ ] Define the project structure
-- [ ] Identify core systems needed (data access, business logic, UI, etc.)
-- [ ] Plan the data model (entities, state shape)
-- [ ] Identify the riskiest technical unknowns
-- [ ] Prototype the riskiest unknown first (spike)
-- [ ] Create the product backlog (see Work Item Structure below)
+- [x] Choose framework/libraries and justify the choice
+- [x] Define the project structure
+- [x] Identify core systems needed (data access, business logic, UI, etc.)
+- [x] Plan the data model (entities, state shape)
+- [x] Identify the riskiest technical unknowns
+- [ ] Prototype the riskiest unknown first (spike) — tracked as SPIKE-1, SPIKE-2 in backlog
+- [x] Create the product backlog (see Work Item Structure below)
 
 **Output:**
 - A technical design doc (`TECH_DESIGN.md`) and a working spike for the biggest risk.
@@ -169,8 +169,8 @@ These documents should be created alongside the process and maintained throughou
 
 ## Current Status
 
-**Phase:** 2 — Concept Selection & Definition
-**Status:** Complete
+**Phase:** 3 — Technical Design & Work Planning
+**Status:** In Progress (spike remaining)
 
 ### Phase History
 
@@ -178,3 +178,4 @@ These documents should be created alongside the process and maintained throughou
 |-------|--------|------|
 | 1 — Brainstorm & Discovery | Complete | 2026-02-20 |
 | 2 — Concept Selection & Definition | Complete | 2026-02-20 |
+| 3 — Technical Design & Work Planning | In Progress | 2026-02-21 |

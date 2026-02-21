@@ -96,3 +96,41 @@ Timestamped record of development conversations and decisions.
 
 15. **User:** Approved writing `CONCEPT.md`.
     - **Action:** Created `CONCEPT.md` with full concept definition, PoC feature list, out-of-scope list, user flow, constraints, future considerations, and decision log. Checked off Phase 2 items in `DEV_PROCESS.md`. Updated status and phase history.
+
+---
+
+## Session 2 — 2026-02-21
+
+**Phases covered:** Phase 2 wrap-up, Phase 3 — Technical Design & Work Planning
+
+### Conversation
+
+16. **User:** Asked about committing and branching strategy.
+    - **Action:** Created `BRANCHING_STRATEGY.md` with feature branching workflow (feature/, bugfix/, chore/, spike/ branches off `main`). Committed and pushed all Phase 1-2 work to `main`.
+
+17. **User:** Suggested creating `CLAUDE.md` for cross-session continuity.
+    - **Action:** Created `CLAUDE.md` with project summary, tech stack, current status, key documents, process reminders, and git info. Committed and pushed.
+
+18. **User:** Initiated Phase 3 — Technical Design & Work Planning.
+    - **Claude:** Researched Goodreads scraping feasibility and NLP library options in parallel.
+    - **Scraping findings:** Goodreads is a React SPA with Cloudflare/DataDome anti-bot protection. Playwright + BeautifulSoup is the required approach. Max ~300 reviews per book. All existing open-source scrapers are broken. Star rating filtering must be done via UI interaction.
+    - **NLP findings:** Recommended VADER (sentiment) + spaCy (noun chunks) + scikit-learn (TF-IDF + NMF) as the PoC combination. Heavier alternatives (BERTopic, KeyBERT) deferred as upgrade path.
+    - **Decision (T1-T6):** See `TECH_DESIGN.md` decision log.
+
+19. **Claude:** Proposed project structure, data model, core systems architecture, and identified Goodreads scraping as the riskiest technical unknown.
+    - **User:** Approved.
+
+20. **Claude:** Created `TECH_DESIGN.md` and `BACKLOG.md`.
+    - **TECH_DESIGN.md:** Architecture, library choices with justification, project structure, core systems design, data model (TypeScript API types), risk table, spike plan, decision log.
+    - **BACKLOG.md:** 5 epics (SPIKE, SCRAPER, ANALYSIS, API, UI) with 14 work items covering Phases 3-5. All items have type, priority, description, and acceptance criteria.
+    - **Action:** Updated `DEV_PROCESS.md` Phase 3 checklist (all items checked except spike execution). Updated `CLAUDE.md` with tech stack details and new documents. Updated `CHAT_LOG.md`.
+
+### Backlog Summary
+
+| Epic | Phase | Items | Description |
+|------|-------|-------|-------------|
+| SPIKE | 3 | SPIKE-1, SPIKE-2 | Validate Goodreads scraping feasibility |
+| SCRAPER | 4 | SCRAPER-1, SCRAPER-2 | Book search and review fetching |
+| ANALYSIS | 4 | ANALYSIS-1, ANALYSIS-2, ANALYSIS-3 | Sentiment, phrases, themes with correlation |
+| API | 4 | API-1, API-2, API-3 | FastAPI project setup and endpoints |
+| UI | 5 | UI-1, UI-2, UI-3, UI-4, UI-5 | React + TypeScript frontend |
