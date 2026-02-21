@@ -153,3 +153,65 @@ Timestamped record of development conversations and decisions.
     - **Conclusion:** Core scraping feasibility confirmed. Pagination and star filtering are implementation details, not blockers.
 
 24. **Action:** Updated `BACKLOG.md` (SPIKE epic marked Done). Updated `DEV_PROCESS.md` (Phase 3 complete). Updated `CLAUDE.md`. Committed spike code and project .gitignore.
+
+---
+
+### Phase 4 — Core Functionality Prototype
+
+25. **User:** Initiated Phase 4. Agreed to separate PRs per work item.
+
+26. **API-1: Set up FastAPI project structure and Pydantic models** (PR #2)
+    - Created backend project structure: `app/`, `routers/`, `scraper/`, `analysis/`, `models/`
+    - Defined Pydantic schemas: `BookSearchResult`, `AnalysisRequest`, `AnalysisResponse` with nested types (`SentimentBreakdown`, `CommonPhrase`, `Theme`, `ReviewSnippet`)
+    - FastAPI app with CORS, health check, and 501 stub endpoints
+    - `requirements.txt` with all dependencies
+    - Verified: app starts, health check returns 200, stubs return 501
+    - **Merged.**
+
+27. **SCRAPER-1: Implement book search** (PR #3)
+    - Playwright-based scraper in `backend/app/scraper/goodreads.py`
+    - Searches Goodreads, parses table layout (with card layout fallback)
+    - Fixed `_extract_book_id()` for new URL format (`41733839-the-great-gatsby` vs old `4671.The_Great_Gatsby`)
+    - Shared browser instance for efficiency, modal dismissal
+    - Tested: 10 results returned for "the great gatsby" with correct IDs, titles, authors, images
+    - **User:** Also requested a `README.md` with project info and setup instructions.
+    - **Action:** Added `README.md` with overview, tech stack, prerequisites, setup, running instructions, and project structure.
+    - **Merged.**
+
+28. **SCRAPER-2: Implement review fetching with pagination** (PR #4)
+    - Added `fetch_reviews()` with `ScrapedReview` dataclass
+    - Discovered Goodreads uses cursor-based pagination via "More reviews and ratings" link (not a "Show more" button as initially assumed)
+    - Updated `_click_more_reviews()` to follow pagination links
+    - Extracts book info from page header (avoids separate request)
+    - Deduplicates reviews across pages
+    - Star rating filter via histogram bar interaction (selectors identified)
+    - Tested: 60 reviews fetched with pagination, 100% rating capture
+    - **Merged.**
+
+29. **ANALYSIS-1: Implement sentiment analysis** (PR #5)
+    - VADER-based sentiment in `backend/app/analysis/sentiment.py`
+    - `analyze_sentiment()` returns per-review `ReviewSentiment` (compound, pos, neg, neu, label) and aggregated `SentimentResult` (counts + percentages)
+    - Uses VADER recommended thresholds (0.05/-0.05)
+    - Tested: correctly classifies positive, negative, and borderline reviews
+    - **Awaiting merge.**
+
+30. **ANALYSIS-2: Implement phrase extraction** (PR #6)
+    - spaCy + TF-IDF in `backend/app/analysis/phrases.py`
+    - `extract_phrases()` combines noun chunk extraction with TF-IDF n-grams
+    - Normalizes phrases (lowercase, strip determiners), filters by min occurrence and length
+    - Tested: returns meaningful phrases ("roaring twenties", "american dream", "writing style", "slow plot")
+    - **Awaiting merge.**
+
+31. **ANALYSIS-3: Implement theme identification with sentiment correlation** (PR #7)
+    - TF-IDF + NMF in `backend/app/analysis/themes.py`
+    - `identify_themes()` discovers topic clusters, assigns reviews to dominant topic
+    - Computes sentiment distribution per theme, selects representative snippets per sentiment polarity
+    - Auto-determines topic count based on corpus size (3-8 topics)
+    - Themes named from top TF-IDF terms
+    - Tested: coherent themes with correct sentiment correlation and representative snippets
+    - **Awaiting merge.** (Depends on PR #5 — ANALYSIS-1)
+
+### Remaining Phase 4 Work
+
+- **API-2:** Book search endpoint — already implemented as part of SCRAPER-1 (PR #3)
+- **API-3:** Analysis endpoint — wires scraper + analysis pipeline together. Next after ANALYSIS PRs merge.
