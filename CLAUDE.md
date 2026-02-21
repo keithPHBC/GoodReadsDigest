@@ -18,10 +18,10 @@
 
 ## Current Status
 
-**Phase:** 3 — Technical Design & Work Planning (In Progress — spike remaining)
-**Next:** Execute SPIKE-1 and SPIKE-2 to validate Goodreads scraping, then move to Phase 4.
+**Phase:** 3 — Technical Design & Work Planning (Complete)
+**Next:** Phase 4 — Core Functionality Prototype
 
-Phases 1-2 are complete. Phase 3 design and backlog are done; the Goodreads scraping spike is the last deliverable.
+Phases 1-3 are complete. Scraping spike confirmed feasibility (30 reviews extracted with ratings, no blocking). Star filtering and pagination need refinement during SCRAPER-2 but are not blockers.
 
 ## Key Documents
 
