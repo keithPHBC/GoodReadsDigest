@@ -13,10 +13,9 @@ import asyncio
 import sys
 import time
 
-from app.scraper.goodreads import search_books, fetch_reviews
+from app.scraper.goodreads import search_books, fetch_reviews, shutdown_browser
 from app.analysis.sentiment import analyze_sentiment
-from app.analysis.phrases import extract_phrases
-from app.analysis.themes import identify_themes
+from app.analysis.phrases import extract_phrases_with_sentiment
 
 
 async def main():
@@ -28,7 +27,7 @@ async def main():
     print("=" * 60)
 
     # Step 1: Search
-    print(f"\n[1/5] Searching for: {query}")
+    print(f"\n[1/4] Searching for: {query}")
     t0 = time.time()
     results = await search_books(query)
     print(f"      Found {len(results)} results ({time.time() - t0:.1f}s)")
@@ -45,7 +44,7 @@ async def main():
     print(f"\n      Selected: {selected.title} (ID: {selected.id})")
 
     # Step 2: Fetch reviews
-    print(f"\n[2/5] Fetching up to {max_reviews} reviews...")
+    print(f"\n[2/4] Fetching up to {max_reviews} reviews...")
     t0 = time.time()
     reviews, book_info = await fetch_reviews(selected.id, max_reviews=max_reviews)
     elapsed = time.time() - t0
@@ -61,7 +60,7 @@ async def main():
     texts = [r.text for r in reviews]
 
     # Step 3: Sentiment analysis
-    print(f"\n[3/5] Analyzing sentiment...")
+    print(f"\n[3/4] Analyzing sentiment...")
     t0 = time.time()
     sentiment = analyze_sentiment(texts)
     print(f"      Done ({time.time() - t0:.1f}s)")
@@ -69,26 +68,17 @@ async def main():
     print(f"      Negative: {sentiment.negative_count} ({sentiment.negative_pct}%)")
     print(f"      Neutral:  {sentiment.neutral_count} ({sentiment.neutral_pct}%)")
 
-    # Step 4: Phrase extraction
-    print(f"\n[4/5] Extracting common phrases...")
+    # Step 4: Phrase extraction with sentiment correlation
+    print(f"\n[4/4] Extracting phrases with sentiment correlation...")
     t0 = time.time()
-    phrases = extract_phrases(texts, top_n=15)
+    phrases = extract_phrases_with_sentiment(sentiment.reviews, top_n=15)
     print(f"      Done ({time.time() - t0:.1f}s)")
-    print(f"      Top phrases:")
-    for p in phrases[:10]:
-        print(f"        {p.count:3d}x  {p.phrase}")
+    print(f"      Found {len(phrases)} phrases:")
 
-    # Step 5: Theme identification
-    print(f"\n[5/5] Identifying themes with sentiment correlation...")
-    t0 = time.time()
-    theme_result = identify_themes(sentiment.reviews)
-    print(f"      Done ({time.time() - t0:.1f}s)")
-    print(f"      Found {len(theme_result.themes)} themes:")
-
-    for theme in theme_result.themes:
-        print(f"\n      --- {theme.name} ({theme.review_count} reviews) ---")
-        print(f"      Sentiment: +{theme.positive_pct}% / -{theme.negative_pct}% / ~{theme.neutral_pct}%")
-        for snippet in theme.snippets:
+    for p in phrases:
+        print(f"\n      --- \"{p.phrase}\" ({p.count}x) ---")
+        print(f"      Sentiment: +{p.positive_pct}% / -{p.negative_pct}% / ~{p.neutral_pct}%")
+        for snippet in p.snippets:
             label = {"positive": "+", "negative": "-", "neutral": "~"}[snippet.sentiment]
             print(f"        [{label}] {snippet.text[:100]}{'...' if len(snippet.text) > 100 else ''}")
 
@@ -100,7 +90,9 @@ async def main():
     print(f"Reviews:  {len(reviews)}")
     print(f"Sentiment: +{sentiment.positive_pct}% / -{sentiment.negative_pct}% / ~{sentiment.neutral_pct}%")
     print(f"Phrases:  {len(phrases)}")
-    print(f"Themes:   {len(theme_result.themes)}")
+
+    # Clean up browser to avoid event loop warnings
+    await shutdown_browser()
 
 
 if __name__ == "__main__":
