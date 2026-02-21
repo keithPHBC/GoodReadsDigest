@@ -3,16 +3,33 @@
 import re
 from collections import Counter
 from dataclasses import dataclass
+from pathlib import Path
 
 import spacy
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 _nlp = spacy.load("en_core_web_sm")
 
-# Phrases shorter than this are likely noise
-MIN_PHRASE_LENGTH = 3
+# Phrases with fewer words than this are filtered out
+MIN_PHRASE_WORDS = 2
 # Minimum number of occurrences to be considered "common"
 MIN_OCCURRENCES = 2
+
+
+def _load_stopwords() -> set[str]:
+    """Load Voyant Tools (Taporware) English stopwords list."""
+    stopwords_path = Path(__file__).parent / "stopwords_en.txt"
+    words = set()
+    with open(stopwords_path) as f:
+        for line in f:
+            word = line.strip().lower()
+            # Skip empty lines, punctuation-only entries, and numbers
+            if word and word.isalpha():
+                words.add(word)
+    return words
+
+
+_STOPWORDS = _load_stopwords()
 
 
 @dataclass
@@ -52,8 +69,15 @@ def _extract_noun_chunks(review_texts: list[str]) -> Counter:
         for chunk in doc.noun_chunks:
             # Normalize: lowercase, strip determiners
             phrase = _clean_phrase(chunk.text)
-            if phrase and len(phrase) >= MIN_PHRASE_LENGTH:
-                chunk_counts[phrase] += 1
+            if not phrase:
+                continue
+            words = phrase.split()
+            # Filter single stopwords and require multi-word phrases
+            if len(words) < MIN_PHRASE_WORDS:
+                continue
+            if all(w in _STOPWORDS for w in words):
+                continue
+            chunk_counts[phrase] += 1
 
     # Filter by minimum occurrences
     return Counter({p: c for p, c in chunk_counts.items() if c >= MIN_OCCURRENCES})
@@ -112,7 +136,7 @@ def _combine_and_rank(
 
     # Add TF-IDF phrases that aren't already captured
     for phrase, score in tfidf_phrases[:top_n * 2]:
-        if phrase not in results and len(phrase) >= MIN_PHRASE_LENGTH:
+        if phrase not in results and len(phrase.split()) >= MIN_PHRASE_WORDS:
             # Estimate count from TF-IDF score (rough approximation)
             results[phrase] = max(MIN_OCCURRENCES, int(score * 2))
 
