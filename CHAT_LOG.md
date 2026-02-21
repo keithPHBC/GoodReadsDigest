@@ -134,3 +134,22 @@ Timestamped record of development conversations and decisions.
 | ANALYSIS | 4 | ANALYSIS-1, ANALYSIS-2, ANALYSIS-3 | Sentiment, phrases, themes with correlation |
 | API | 4 | API-1, API-2, API-3 | FastAPI project setup and endpoints |
 | UI | 5 | UI-1, UI-2, UI-3, UI-4, UI-5 | React + TypeScript frontend |
+
+### Spike Execution
+
+21. **User:** Approved executing the Goodreads scraping spike.
+    - **Action:** Created `spike/goodreads-scraping` branch. Set up Python venv. Installed Playwright + BeautifulSoup. Wrote `backend/spike/spike_scrape.py`.
+
+22. **SPIKE-1 Results: PASSED**
+    - 30 reviews extracted from The Great Gatsby with full text
+    - 30/30 star ratings captured via `aria-label` attributes
+    - No CAPTCHA or blocking encountered
+    - Required dismissing a sign-up modal (Escape key)
+    - Key selectors: `.ReviewCard` for cards, `aria-label` with "Rating X out of 5" for stars
+
+23. **SPIKE-2 Results: PARTIAL**
+    - Pagination: "Show more" button found and clicked via `button:has-text("Show more")`. Review count stayed at 30 after one click — needs longer wait or multiple clicks. Mechanism confirmed.
+    - Star filter: The "Filters" button opens a language/sort panel, not star ratings. Star rating filter likely accessed via histogram bars or separate UI. Needs investigation during SCRAPER-2.
+    - **Conclusion:** Core scraping feasibility confirmed. Pagination and star filtering are implementation details, not blockers.
+
+24. **Action:** Updated `BACKLOG.md` (SPIKE epic marked Done). Updated `DEV_PROCESS.md` (Phase 3 complete). Updated `CLAUDE.md`. Committed spike code and project .gitignore.
