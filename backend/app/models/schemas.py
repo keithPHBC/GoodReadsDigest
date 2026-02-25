@@ -36,18 +36,14 @@ class SentimentBreakdown(BaseModel):
     neutral: float
 
 
-class CommonPhrase(BaseModel):
-    phrase: str
-    count: int
-
-
 class ReviewSnippet(BaseModel):
     text: str
     sentiment: str  # "positive", "negative", or "neutral"
 
 
-class Theme(BaseModel):
-    name: str
+class PhraseSentiment(BaseModel):
+    phrase: str
+    count: int
     sentiment: SentimentBreakdown
     snippets: list[ReviewSnippet]
 
@@ -56,5 +52,4 @@ class AnalysisResponse(BaseModel):
     book: BookSearchResult
     review_count: int
     overall_sentiment: SentimentBreakdown
-    common_phrases: list[CommonPhrase]
-    themes: list[Theme]
+    phrases: list[PhraseSentiment]

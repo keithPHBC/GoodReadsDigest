@@ -298,45 +298,76 @@ async def _apply_star_filter(page: Page, star_rating: int):
 
 
 async def _collect_reviews(page: Page, max_reviews: int) -> list[ScrapedReview]:
-    """Collect reviews from the page, paginating as needed."""
+    """Collect reviews from the page, paginating as needed.
+
+    Goodreads uses two pagination mechanisms:
+    1. Book page: "More reviews and ratings" <a> link navigates to a reviews page.
+    2. Reviews page: "Show more reviews" <button> replaces the current 30 reviews
+       with the next 30 via GraphQL (not appending — the old reviews disappear).
+
+    We must collect each batch before clicking for the next one.
+    """
     all_reviews: list[ScrapedReview] = []
     seen_texts: set[str] = set()  # Deduplicate reviews
 
     # Max pagination attempts to avoid infinite loops
     max_pages = (max_reviews // 30) + 2
 
-    for _ in range(max_pages):
-        html = await page.content()
-        soup = BeautifulSoup(html, "html.parser")
-
+    def _harvest_reviews(soup):
+        """Parse review cards from current page HTML, return new count."""
         cards = soup.select(".ReviewCard")
         new_count = 0
-
         for card in cards:
             review = _parse_review_card(card)
             if review and review.text:
-                # Deduplicate by first 100 chars
                 key = review.text[:100]
                 if key not in seen_texts:
                     seen_texts.add(key)
                     all_reviews.append(review)
                     new_count += 1
+        return new_count
+
+    # Harvest first page
+    html = await page.content()
+    soup = BeautifulSoup(html, "html.parser")
+    _harvest_reviews(soup)
+
+    if len(all_reviews) >= max_reviews:
+        return all_reviews[:max_reviews]
+
+    # Step 1: Navigate from book page to reviews page via link
+    navigated = await _navigate_to_reviews_page(page)
+
+    if navigated:
+        html = await page.content()
+        soup = BeautifulSoup(html, "html.parser")
+        new = _harvest_reviews(soup)
 
         if len(all_reviews) >= max_reviews:
-            break
+            return all_reviews[:max_reviews]
 
-        # Try to load more reviews via "More reviews and ratings" link
-        loaded_more = await _click_more_reviews(page)
-        if not loaded_more or new_count == 0:
-            break
+        # Step 2: Click "Show more reviews" button repeatedly
+        # Each click REPLACES the current 30 reviews with the next 30
+        for _ in range(max_pages - 1):
+            loaded = await _click_show_more_reviews(page)
+            if not loaded:
+                break
+
+            html = await page.content()
+            soup = BeautifulSoup(html, "html.parser")
+            new = _harvest_reviews(soup)
+
+            if new == 0 or len(all_reviews) >= max_reviews:
+                break
 
     return all_reviews[:max_reviews]
 
 
-async def _click_more_reviews(page: Page) -> bool:
-    """Click 'More reviews and ratings' link to load the next page.
+async def _navigate_to_reviews_page(page: Page) -> bool:
+    """Click 'More reviews and ratings' link to navigate to the reviews page.
 
-    Returns True if navigation to a new reviews page succeeded.
+    This link only appears on the book page (not on the reviews page).
+    Returns True if navigation succeeded.
     """
     try:
         link = page.locator('a:has-text("More reviews and ratings")').first
@@ -345,9 +376,32 @@ async def _click_more_reviews(page: Page) -> bool:
             await _random_delay(2, 4)
             await link.click()
             await _random_delay(4, 7)
-            # Dismiss any modals that appear on the new page
             await _dismiss_modals(page)
-            # Wait for review cards on the new page
+            try:
+                await page.wait_for_selector(".ReviewCard", timeout=15000)
+            except Exception:
+                await asyncio.sleep(3)
+            return True
+    except Exception:
+        pass
+
+    return False
+
+
+async def _click_show_more_reviews(page: Page) -> bool:
+    """Click the 'Show more reviews' button on the reviews page.
+
+    This button triggers a GraphQL call that replaces the current 30
+    reviews with the next 30. Returns True if the click succeeded.
+    """
+    try:
+        btn = page.locator('button:has-text("Show more reviews")').first
+        if await btn.is_visible(timeout=5000):
+            await btn.scroll_into_view_if_needed()
+            await _random_delay(2, 4)
+            await btn.click()
+            await _random_delay(4, 7)
+            await _dismiss_modals(page)
             try:
                 await page.wait_for_selector(".ReviewCard", timeout=15000)
             except Exception:

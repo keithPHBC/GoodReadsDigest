@@ -5,7 +5,7 @@ from app.routers import books, analysis
 
 app = FastAPI(
     title="GoodReadsDigest",
-    description="Analyze Goodreads reviews to surface sentiment, phrases, and themes.",
+    description="Analyze Goodreads reviews to surface sentiment patterns and common phrases.",
     version="0.1.0",
 )
 
